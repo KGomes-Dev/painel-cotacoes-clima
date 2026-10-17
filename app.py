@@ -25,7 +25,6 @@ with col_esquerda:
     
     if st.button("Atualizar Cotações via API"):
         try:
-            # Cabeçalhos para simular um navegador e evitar bloqueios da API na nuvem
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
             }
@@ -35,13 +34,11 @@ with col_esquerda:
             if requisicao.status_code == 200:
                 requisicao_dic = requisicao.json()
                 
-                # Extração segura com tratamento de chaves (substitui hífens caso a API retorne sem eles)
                 cotacao_dolar = float(requisicao_dic.get('USDBRL', {}).get('bid', 0))
                 cotacao_euro = float(requisicao_dic.get('EURBRL', {}).get('bid', 0))
                 cotacao_btc = float(requisicao_dic.get('BTCBRL', {}).get('bid', 0)) * 1000
 
                 if cotacao_dolar > 0:
-                    # Gravar no Excel
                     tabela = pd.read_excel('Cotações.xlsx')
                     tabela.loc[0, 'Cotação'] = cotacao_dolar
                     tabela.loc[1, 'Cotação'] = cotacao_euro
@@ -50,15 +47,17 @@ with col_esquerda:
                     
                     tabela.to_excel('Cotações.xlsx', index=False)
                     st.success("Cotações atualizadas com sucesso!")
-                    st.rerun() # Atualiza a página automaticamente para mostrar os novos valores
+                    st.rerun()
                 else:
                     st.error("A API respondeu, mas os valores vieram vazios.")
+                    
+            elif requisicao.status_code == 429:
+                st.warning("Limite temporário da API atingido (Erro 429). Por favor, aguarde cerca de um minuto antes de clicar novamente.")
             else:
                 st.error(f"Erro na API. Código de status: {requisicao.status_code}")
                 
         except Exception as e:
             st.error(f"Erro ao conectar com a API: {e}")
-
     try:
         tabela_atual = pd.read_excel('Cotações.xlsx')
         
