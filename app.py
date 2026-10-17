@@ -6,7 +6,6 @@ from datetime import datetime
 # Configuração da página para ocupar a largura toda
 st.set_page_config(page_title="Painel Integrado: Cotações e Clima", layout="wide")
 
-
 st.title("📊🌧️ Painel Integrado: Cotações e Clima")
 st.write("Acompanhe as cotações financeiras e a previsão do tempo lado a lado em tempo real.")
 
@@ -36,7 +35,7 @@ with col_esquerda:
                 
                 cotacao_dolar = float(requisicao_dic.get('USDBRL', {}).get('bid', 0))
                 cotacao_euro = float(requisicao_dic.get('EURBRL', {}).get('bid', 0))
-                cotacao_btc = float(requisicao_dic.get('BTCBRL', {}).get('bid', 0)) * 1000
+                cotacao_btc = float(requisicao_dic.get('BTCBRL', {}).get('bid', 0))
 
                 if cotacao_dolar > 0:
                     tabela = pd.read_excel('Cotações.xlsx')
@@ -58,19 +57,28 @@ with col_esquerda:
                 
         except Exception as e:
             st.error(f"Erro ao conectar com a API: {e}")
+
     try:
         tabela_atual = pd.read_excel('Cotações.xlsx')
+        
+        # Leitura segura dos valores da tabela
+        def obter_cotacao(moeda_nome):
+            linha = tabela_atual[tabela_atual['Moeda'].astype(str).str.strip().str.lower() == moeda_nome.lower()]
+            if not linha.empty:
+                return float(linha['Cotação'].values[0])
+            return 0.0
+
+        val_dolar = obter_cotacao('Dólar')
+        val_euro = obter_cotacao('Euro')
+        val_btc = obter_cotacao('Bitcoin')
         
         # Métricas divididas em 3 colunas pequenas internas
         m1, m2, m3 = st.columns(3)
         with m1:
-            val_dolar = tabela_atual.loc[tabela_atual['Moeda'] == 'Dólar', 'Cotação'].values[0]
             st.metric(label="USD", value=f"R$ {val_dolar:.2f}")
         with m2:
-            val_euro = tabela_atual.loc[tabela_atual['Moeda'] == 'Euro', 'Cotação'].values[0]
             st.metric(label="EUR", value=f"R$ {val_euro:.2f}")
         with m3:
-            val_btc = tabela_atual.loc[tabela_atual['Moeda'] == 'Bitcoin', 'Cotação'].values[0]
             st.metric(label="BTC", value=f"R$ {val_btc:,.2f}")
 
         st.subheader("Tabela de Dados")
