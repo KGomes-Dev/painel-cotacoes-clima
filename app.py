@@ -25,24 +25,39 @@ with col_esquerda:
     
     if st.button("Atualizar Cotações via API"):
         try:
-            requisicao = requests.get('https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL')
-            requisicao_dic = requisicao.json()
+            # Cabeçalhos para simular um navegador e evitar bloqueios da API na nuvem
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+            url = 'https://economia.awesomeapi.com.br/json/last/USD-BRL,EUR-BRL,BTC-BRL'
+            requisicao = requests.get(url, headers=headers, timeout=10)
             
-            cotacao_dolar = float(requisicao_dic['USDBRL']['bid'])
-            cotacao_euro = float(requisicao_dic['EURBRL']['bid'])
-            cotacao_btc = float(requisicao_dic['BTCBRL']['bid']) * 1000
+            if requisicao.status_code == 200:
+                requisicao_dic = requisicao.json()
+                
+                # Extração segura com tratamento de chaves (substitui hífens caso a API retorne sem eles)
+                cotacao_dolar = float(requisicao_dic.get('USDBRL', {}).get('bid', 0))
+                cotacao_euro = float(requisicao_dic.get('EURBRL', {}).get('bid', 0))
+                cotacao_btc = float(requisicao_dic.get('BTCBRL', {}).get('bid', 0)) * 1000
 
-            # Gravar no Excel
-            tabela = pd.read_excel('Cotações.xlsx')
-            tabela.loc[0, 'Cotação'] = cotacao_dolar
-            tabela.loc[1, 'Cotação'] = cotacao_euro
-            tabela.loc[2, 'Cotação'] = cotacao_btc
-            tabela.loc[0, 'Data Útilima Atualização'] = datetime.now()
-            
-            tabela.to_excel('Cotações.xlsx', index=False)
-            st.success("Cotações atualizadas!")
+                if cotacao_dolar > 0:
+                    # Gravar no Excel
+                    tabela = pd.read_excel('Cotações.xlsx')
+                    tabela.loc[0, 'Cotação'] = cotacao_dolar
+                    tabela.loc[1, 'Cotação'] = cotacao_euro
+                    tabela.loc[2, 'Cotação'] = cotacao_btc
+                    tabela.loc[0, 'Data Útilima Atualização'] = datetime.now()
+                    
+                    tabela.to_excel('Cotações.xlsx', index=False)
+                    st.success("Cotações atualizadas com sucesso!")
+                    st.rerun() # Atualiza a página automaticamente para mostrar os novos valores
+                else:
+                    st.error("A API respondeu, mas os valores vieram vazios.")
+            else:
+                st.error(f"Erro na API. Código de status: {requisicao.status_code}")
+                
         except Exception as e:
-            st.error(f"Erro ao atualizar: {e}")
+            st.error(f"Erro ao conectar com a API: {e}")
 
     try:
         tabela_atual = pd.read_excel('Cotações.xlsx')
